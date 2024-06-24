@@ -89,13 +89,11 @@ def produto_definir():
             data1 = ({'Meses':['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'], 'Contrato Ajustado [MWh]:':df.iloc[12]})
             data = pd.DataFrame({'Máxima [MWh]':df.iloc[5], 'Horas [h]:':df.iloc[4], 'Contrato Ajustado [MWm]:':df.iloc[11],'Contrato Ajustado [MWh]:':df.iloc[12]})
             #data1_transpose = data1.T
-            data_transpose = data.T
-
-            
+            data_transpose = data.T          
    
     with st.container():
         st.title('Caracteristicas do Consumo')   
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.write('Máx. Var. Consumo (%)')
             st.write(max_varaição)           
@@ -104,7 +102,8 @@ def produto_definir():
             st.write(total_MWh)
         with col3:
             st.write('Méd . Consumo (MWm)')
-            st.write(total_MWm)         
+            st.write(total_MWm)
+    
 
     with st.container():
         st.title('Dados de Consumo')
@@ -114,30 +113,50 @@ def produto_definir():
     with st.container():
         st.title('Balanço Energetico') 
         
-        def take():
-            if df.iloc[5]*(1+0.03)<=df.iloc[12]*(1-flex_min):
-                return df.iloc[12]*(1-flex_min)
-            
-            elif df.iloc[5]*(1+0.03)>=df.iloc[12]*(1+flex_max):
-                return df.iloc[12]*(1+flex_max)
-
-            elif df.iloc[5]*(1+0.03)<df.iloc[12]*(1+flex_max) and df.iloc[5]*(1+0.03)>df.iloc[12]*(1-flex_min):
-                return df.iloc[5]*(1+0.03)
-
         balanco1 = pd.DataFrame({'Flex Máx. [MWh]':df.iloc[12]*(1+flex_max),'Sazo Sugerida [MWh]':df.iloc[12], 'Flex Min. [MWh]':df.iloc[12]*(1-flex_min), 
-        'Sazo Sugerida [MWm]:':df.iloc[11], 'Necessidade [MWh]:':df.iloc[5]*(1+0.03),'Take [MWh]': take})
-
-
-
+        'Sazo Sugerida [MWm]:':df.iloc[11], 'Necessidade [MWh]:':df.iloc[5]*(1+0.03)})
 
         balanco = balanco1.T
-        st.dataframe(balanco, width=1500)
+
+    def take1():
+        result = pd.Series(index=balanco.index)  # Criar uma série para armazenar os resultados
+
+        for coluna in balanco.columns:
+            necessidade = balanco.loc['Necessidade [MWh]:', coluna]
+            flex_max = balanco.loc['Flex Máx. [MWh]', coluna]
+            flex_min = balanco.loc['Flex Min. [MWh]', coluna]
+
+            if (necessidade >= flex_max).all():
+                result[coluna] = flex_max
+            elif (necessidade <= flex_min).all():
+                result[coluna] = flex_min
+            elif (necessidade > flex_min).all() and (necessidade < flex_max).all():
+                result[coluna] = necessidade
+            else:
+                result[coluna] = None
+        
+        return result
+
+    take = take1()
+
+    balanco.loc['Take [MWh]',:] = take
+    balanco.loc['Exposição [MWh]',:] = balanco.loc['Take [MWh]',:] - balanco.loc['Necessidade [MWh]:']
+    balanco.loc['Variação Exposição / Take',:] = balanco.loc['Exposição [MWh]',:] / balanco.loc['Take [MWh]']
+    
+    max_exposicao = balanco.loc['Variação Exposição / Take'].max()
+
+    balanco_t = balanco.transpose()
+
+    st.dataframe(balanco, width=1500)
 
     with st.container():
         fig = go.Figure(layout=dict(width=1500, height=500))
 
         #grafico de barras
-        fig.add_trace(go.Bar(x=data1['Meses'], y=balanco1['Necessidade [MWh]:'], name='Volume Ajustado [MWh]', marker_color='orange'))
+        fig.add_trace(go.Bar(x=data1['Meses'], y=balanco1['Necessidade [MWh]:'], name='Necessidade [MWh]', marker_color='orange'))
+
+        #grafico de barras
+        fig.add_trace(go.Bar(x=data1['Meses'], y=balanco_t['Take [MWh]'], name='Take [MWh]', marker_color='blue'))
 
         #grafico de linhas flex max
         fig.add_trace(go.Scatter(x=data1['Meses'], y=balanco1['Flex Máx. [MWh]'], mode='lines+markers', name='Flex Máx. [MWh]', line=dict(color='red', width=2)))
@@ -153,6 +172,10 @@ def produto_definir():
         
         # Exibindo o gráfico no Streamlit
         st.plotly_chart(fig)
+
+        with col4:
+            st.write('Máx. Variação Take (%)')
+            st.write(max_exposicao)   
 
 
 def renderizar_pagina():
