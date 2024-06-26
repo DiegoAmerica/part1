@@ -17,7 +17,7 @@ def produto_definir():
     
     with st.container():
         st.title('Caracteristicas do Produto Sugerido')
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
             st.write('Previsão de Incremento (%)')
             incremento = st.number_input('', min_value=0, value=5, max_value=100, step=1) 
@@ -34,6 +34,10 @@ def produto_definir():
             st.write('Sazo (%)')
             sazo_input = st.number_input('', min_value=0, max_value=100, step=4)
             sazo_input = np.multiply(sazo_input, 0.01)
+        with col5:
+            st.write('Tipo de Sazo')
+            tipo_sazo = st.selectbox('Selecione uma oção', ['PORCENTAGEM', 'FLAT'])
+
 
     with st.container():        
             df = pd.DataFrame(dados)
@@ -81,9 +85,7 @@ def produto_definir():
             #Contrato ajustado MWh
             contrato_ajustado_MWh = df.loc['Contrato Ajustado [MWh]:', :] = np.multiply(contrato_ajustado_MWm1, linhas_horas1)
             contrato_ajustado_MWh = pd.DataFrame(contrato_ajustado_MWh)
-            contrato_ajustado_MWh =  contrato_ajustado_MWm.astype(float)
-
-
+            contrato_ajustado_MWh =  contrato_ajustado_MWm.astype(float)       
 
             #df = pd.DataFrame(df)
             data1 = ({'Meses':['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'], 'Contrato Ajustado [MWh]:':df.iloc[12]})
@@ -96,14 +98,15 @@ def produto_definir():
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.write('Máx. Var. Consumo (%)')
-            st.write(max_varaição)           
+            max_varaiçãop = round(max_varaição * 100, 2)
+            st.markdown(f"<h4 style='text-align; color: white;'> {max_varaiçãop}% </h4>", unsafe_allow_html=True)
         with col2:
             st.write('Méd . Consumo (MWh)')
-            st.write(total_MWh)
+            st.markdown(f"<h4 style='text-align; color: white;'> {total_MWh} MWh </h4>", unsafe_allow_html=True)
         with col3:
             st.write('Méd . Consumo (MWm)')
-            st.write(total_MWm)
-    
+            total_MWmr = round(total_MWm,5)
+            st.markdown(f"<h4 style='text-align; color: white;'> {total_MWmr} MWm </h4>", unsafe_allow_html=True)
 
     with st.container():
         st.title('Dados de Consumo')
@@ -113,7 +116,7 @@ def produto_definir():
     with st.container():
         st.title('Balanço Energetico') 
         
-        balanco1 = pd.DataFrame({'Flex Máx. [MWh]':df.iloc[12]*(1+flex_max),'Sazo Sugerida [MWh]':df.iloc[12], 'Flex Min. [MWh]':df.iloc[12]*(1-flex_min), 
+        balanco1 = pd.DataFrame({'Flex Máx. [MWh]':df.iloc[12]*(1+flex_max),'Sazo Sugerida [MWh]':df.loc['Contrato Ajustado [MWh]:'], 'Flex Min. [MWh]':df.iloc[12]*(1-flex_min), 
         'Sazo Sugerida [MWm]:':df.iloc[11], 'Necessidade [MWh]:':df.iloc[5]*(1+0.03)})
 
         balanco = balanco1.T
@@ -175,7 +178,8 @@ def produto_definir():
 
         with col4:
             st.write('Máx. Variação Take (%)')
-            st.write(max_exposicao)   
+            max_exposicaop = round(max_exposicao, 5)
+            st.markdown(f"<h4 style='text-align; color: white;'> {max_exposicaop}% </h4>", unsafe_allow_html=True)   
 
 
 def renderizar_pagina():
